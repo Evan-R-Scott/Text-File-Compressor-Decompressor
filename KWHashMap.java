@@ -1,5 +1,5 @@
 // creates the interface for the HashMap
-public interface KWHashMap {
+public interface KWHashMap<K,V> {
     V get(Object key);
 
     V put(K key, V value);
