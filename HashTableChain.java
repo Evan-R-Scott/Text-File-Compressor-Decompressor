@@ -1,3 +1,4 @@
+//import statement
 import java.util.*;
 public class HashTableChain<K,V> implements KWHashMap<K,V> {
     // creates constructor class that gets key and value and can set value to a key
