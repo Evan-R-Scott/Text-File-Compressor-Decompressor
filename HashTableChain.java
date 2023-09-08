@@ -97,7 +97,7 @@ public class HashTableChain<K,V> implements KWHashMap<K,V> {
             if (current.getKey().equals(key)) {
                 iter.remove();
                 numKeys--;
-                if (table[index].size() == 0) {
+                if (table[index].isEmpty()) {
                     table[index] = null;
                 }
                 numKeys--;
