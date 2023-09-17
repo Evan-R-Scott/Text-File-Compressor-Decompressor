@@ -1,106 +1,118 @@
-//import statements
 import java.io.*;
-import java.util.Scanner;
-import java.lang.String;
+import java.util.*;
+import java.text.DecimalFormat;
 
-public class Decompressor {
-    public static void main(String[] args) {
-        // initialize necessary variables to calculate time
-        double startTime, endTime, totalTime;
-        startTime = System.nanoTime();
-        // initialize file variables put in command line
-        String input = "";
-        input = args[0];
-        File myFile;
-        myFile = new File(args[0]);
-        // more miscellaneous initializations, including scanner, table size, and .log string
-        String log = ".log";
-        int table_size = 233;
-        boolean valid = false;
-        BufferedReader fileBuff;
-        Scanner scan = new Scanner(System.in);
-        // do while loop that executes until a valid file is provided by user, prompts user to enter in new filename if not valid.
-        do {
-            try {
-                fileBuff = new BufferedReader(new FileReader(myFile));
-                valid = true;
-            } catch (FileNotFoundException e) {
-                System.out.println("Invalid filename. Try Again.");
-                System.out.println("Enter the filename.\n");
-                String filer = scan.nextLine();
-                input = filer;
-                myFile = new File(filer);
-            }
-        } while (!valid);
-        // implement HashTable into program set at table size initialized earlier.
-        HashTableChain<Integer, String> table = new HashTableChain<>(table_size);
-        // loops through 128 characters putting them in the hash table
-        for (int i = 0; i < 128; i++) {
-            table.put(i, String.valueOf((char) i));
+public class Decompressor{
+    public static void main(String[] args){
+        Scanner stdin = new Scanner(System.in);
+        String filename;
+        String userResponse = "";
+
+        //Prompt for filename if needed
+        if(args.length > 0){
+            filename = args[0];
+        }else{
+            System.out.println("What is the name of the file to decompress?");
+            filename = stdin.nextLine();
         }
 
-        // cuts off the .zzz of the filename inputted by user
-        int dotIndex = input.lastIndexOf(".");
-        String filename = input.substring(0, dotIndex);
-        try {
-            // initializes all stream and writer objects to read in the binary file and write out the decompressed code
-            FileInputStream file = new FileInputStream(myFile);
-            ObjectInputStream obj = new ObjectInputStream(file);
-            FileWriter writer = new FileWriter(filename);
-            // initialize variables for hash table additions in while loop below
-            String entry = "";
-            int chFirst;
-            String newQ = "";
-            boolean val = true;
-            int count = 127;
-            // gets the p starting value of file and writes to hash table
-            int p = obj.readInt();
-            writer.write(table.get(p));
-            // iterates through the file until no more bytes are available to be read
-            while (obj.available() > 0) {
-                // reads each binary value
-                chFirst = obj.readInt();
-                // first character is in the dict get it and assign it to entry
-                if (chFirst < table.size()) {
-                    entry = table.get(chFirst);
-                    // else, entry is assigned to p and the first character of previous
-                } else {
-                    entry = table.get(p) + table.get(p).charAt(0);
+        do{
+            try{
+                File file = new File(filename);
+                boolean valid = false;
+                ObjectInputStream input;
+
+                //Check for valid file name
+                do{
+                    try{
+                        if(filename.contains(".zzz")){
+                            input = new ObjectInputStream(new FileInputStream(file));
+                            valid = true;
+                        }else{
+                            System.out.println("What is the name of the file to decompress?");
+
+                            filename = stdin.nextLine();
+                            file = new File(filename);
+                        }
+                    }catch(FileNotFoundException e){
+                        System.out.println("What is the name of the file to decompress?");
+
+                        filename = stdin.nextLine();
+                        file = new File(filename);
+                    }
+                }while(!valid);
+
+                input = new ObjectInputStream(new FileInputStream(file));
+                List<String> table = new ArrayList<String>();
+
+                long startTime = System.nanoTime();
+
+                //Initialize table with ASCII characters
+                for(int i = 0; i < 128; i++){
+                    table.add(String.valueOf((char)i));
                 }
-                // write to the file whatever entry was assigned to
-                writer.write(entry);
-                // accumulate count variable and insert the new pair found into the table
-                count++;
-                table.put(count, table.get(p) + entry.charAt(0));
-                // reassign p to chFirts
-                p = chFirst;
+
+                PrintWriter output = new PrintWriter(new FileOutputStream(filename.substring(0, filename.length()-4)));
+
+                try{
+                    String previous_value = table.get(input.readInt());
+                    output.print(previous_value);
+                    int current_index;
+
+                    while(true){
+                        current_index = input.readInt();
+                        int size = table.size();
+
+                        //Check to see if the current index is within the table and has a value associated with it
+                        if((size > current_index) && (table.get(current_index) != null)){
+                            String current_value = table.get(current_index);
+                            output.print(current_value);
+                            table.add(previous_value + current_value.substring(0, 1));
+                            previous_value = current_value;
+                        }else{
+                            output.print(previous_value + previous_value.substring(0, 1));
+                            if(size > current_index){
+                                table.set(current_index, previous_value + previous_value.substring(0, 1));
+                            }else{
+                                //Increase the table size to store the current value
+                                while(size < current_index + 1){
+                                    table.add(null);
+                                    size = table.size();
+                                }
+                                table.set(current_index, previous_value + previous_value.substring(0, 1));
+                            }
+                            previous_value = table.get(current_index);
+                        }
+                    }
+                }catch(EOFException e){
+                    long endTime = System.nanoTime();
+
+                    try{
+                        input.close();
+                        output.close();
+
+                        PrintWriter log_file = new PrintWriter(new FileOutputStream(filename.substring(0, filename.length()-4) + ".log"));
+                        DecimalFormat df = new DecimalFormat("###.###"); //Used for formatting
+
+                        //Write to the log file
+                        log_file.println("Decompression for file " + filename);
+                        log_file.println("Decompression took " + df.format(((endTime - startTime)/Math.pow(10, 9))) + " seconds.");
+                        log_file.println("The table was doubled 0 times.");
+
+                        log_file.close();
+
+                        //Prompt the user to run the program again
+                        System.out.println("Would you like to run again? (y/n)");
+                        userResponse = stdin.nextLine();
+                        filename = "";
+                    }catch(IOException error){
+                        System.out.println(error);
+                    }
+                }
+
+            }catch(IOException e){
+                System.out.println(e);
             }
-            // close out of streams and writers
-            obj.close();
-            file.close();
-        }
-        // all catch blocks for possible throws
-        catch (StreamCorruptedException e) {
-            System.out.println("Decompression Completed");
-        } catch (FileNotFoundException e) {
-            System.out.println("File Not Found.\n" + e.getMessage());
-        } catch (IOException e) {
-            System.out.println("An error occurred while writing to the file.\n" + e.getMessage());
-        }
-        // create Decompression log file
-        File newFile = new File(filename + log);
-        // calculate time took
-        endTime = System.nanoTime();
-        totalTime = (endTime - startTime) / 1000000000.0;
-        // try block that writes to log file the results
-        try {
-            FileWriter newWriter = new FileWriter(input + log);
-            newWriter.write("Decompression of " + input);
-            newWriter.write("\nDecompression took " + totalTime + " seconds.");
-            newWriter.write("\nThe table was doubled " + table.getRehashes() + " times.");
-            newWriter.close();
-        } catch (IOException e) {
-            System.out.println("An error occurred while writing to the file: " + e.getMessage());
-        }
+        }while(userResponse.equalsIgnoreCase("y"));
     }
 }

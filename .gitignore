@@ -1,3 +1,5 @@
 *.class
 *.txt.zzz
 *.txt.zzz.log
+*.txt.log
+*.txt

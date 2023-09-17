@@ -11,7 +11,6 @@ public class Compressor {
         input = args[0];
         File myFile;
         myFile = new File(args[0]);
-        long fileSizeKB = 0;
         // extensions for filenames
         String extension = ".zzz";
         String log = ".zzz.log";
@@ -54,7 +53,6 @@ public class Compressor {
             String track = "";
             char lastVal = ' ';
             int count = 127;
-            fileSizeKB = myFile.length() / 1024;
             int check;
             int valueWrite;
             String test;
@@ -99,7 +97,6 @@ public class Compressor {
         }
         //variables
         File newFile = new File(input + extension);
-        long newFileSizeKB = newFile.length() / 1024;
         endTime = System.nanoTime();
         //calculate total time it took to run
         totalTime = (endTime - startTime) / 1000000000.0;
@@ -107,7 +104,12 @@ public class Compressor {
         try {
             FileWriter newWriter = new FileWriter(input + log);
             newWriter.write("Compression of " + input);
-            newWriter.write("\nCompressed from " + fileSizeKB + " Kilobytes to " + newFileSizeKB + " Kilobytes.");
+            if(myFile.length() < 1000) {
+                newWriter.write("\nCompressed to " + myFile.length() + " Bytes from " + newFile.length() + " Bytes.");
+            }
+            else{
+                newWriter.write("\nCompressed to " + myFile.length()/1000 + " Kilobytes from " + newFile.length()/1000 + " Kilobytes.");
+            }
             newWriter.write("\nCompression took " + totalTime + " seconds.");
             newWriter.write("\nThe dictionary contains " + table.size() + " total entries.");
             newWriter.write("\nThe table was rehashed " + table.getRehashes() + " times.");
